@@ -254,6 +254,10 @@ var Analyzers = lint.InitializeAnalyzers(Docs, map[string]*analysis.Analyzer{
 		Run:      CheckLoopEmptyDefault,
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
 	},
+	"SA50044T": {
+		Run:      CheckDubiousSelectUnlabeledBreakInLoopSelect,
+		Requires: []*analysis.Analyzer{inspect.Analyzer},
+	},
 	"SA5005": {
 		Run:      CheckCyclicFinalizer,
 		Requires: []*analysis.Analyzer{buildir.Analyzer},

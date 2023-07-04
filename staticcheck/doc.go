@@ -843,6 +843,13 @@ infinite loop, defers will never execute.`,
 		MergeIf:  lint.MergeIfAny,
 	},
 
+	"SA50044T": {
+		Title:    `Weird for select case`,
+		Since:    "2022.1",
+		Severity: lint.SeverityWarning,
+		MergeIf:  lint.MergeIfAny,
+	},
+
 	"SA5005": {
 		Title: `The finalizer references the finalized object, preventing garbage collection`,
 		Text: `A finalizer is a function associated with an object that runs when the

@@ -1276,6 +1276,52 @@ func CheckExec(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
+func CheckDubiousSelectUnlabeledBreakInLoopSelect(pass *analysis.Pass) (interface{}, error) {
+	fn := func(node ast.Node) {
+		loop := node.(*ast.ForStmt)
+		if len(loop.Body.List) != 1 || loop.Cond != nil || loop.Init != nil {
+			return
+		}
+
+		for _, stmt := range loop.Body.List {
+			if node, ok := stmt.(*ast.SelectStmt); ok {
+				for _, stmt := range node.Body.List {
+					if node, ok := stmt.(*ast.CommClause); ok {
+						body := node.Body
+						if node, ok := node.Comm.(*ast.ExprStmt); ok {
+							if expr, ok := node.X.(*ast.UnaryExpr); ok {
+								if expr, ok := expr.X.(*ast.CallExpr); ok {
+									if expr, ok := expr.Fun.(*ast.SelectorExpr); ok {
+										sel := expr.Sel.Name
+										if ident, ok := expr.X.(*ast.Ident); ok {
+											if pass.TypesInfo.TypeOf(ident).String() == "context.Context" && sel == "Done" {
+												foundBranch := false
+												for _, stmt := range body {
+													if stmt, ok := stmt.(*ast.BranchStmt); ok {
+														if stmt.Label != nil {
+															foundBranch = true
+														}
+													}
+												}
+												if !foundBranch {
+													report.Report(pass, ident, "found dubious for+select case which reads from a context and breaks without a label, do you mean to break the outer loop? do that by adding a label to the for loop and break that break with label in context.Done() branch",
+														report.Fixes(edit.Fix("add labeled break to this loop", edit.ReplaceWithString(ident, "label"))))
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	code.Preorder(pass, fn, (*ast.ForStmt)(nil))
+	return nil, nil
+}
+
 func CheckLoopEmptyDefault(pass *analysis.Pass) (interface{}, error) {
 	fn := func(node ast.Node) {
 		loop := node.(*ast.ForStmt)
